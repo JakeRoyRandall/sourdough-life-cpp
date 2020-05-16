@@ -15,6 +15,7 @@ public:
     void run(int steps);
     void seed(uint32_t value, double density = 0.28);
     bool place(const std::string& pattern, int x, int y);
+    std::string plain() const;
     std::string render() const;
 
 private:
@@ -23,3 +24,6 @@ private:
     int index(int x, int y) const { return y * width_ + x; }
     int neighbors(int x, int y) const;
 };
+
+LifeGrid loadPlain(const std::string& path);
+void savePlain(const LifeGrid& grid, const std::string& path, bool force);

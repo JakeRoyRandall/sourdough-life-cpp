@@ -3,6 +3,8 @@
 #include <random>
 #include <sstream>
 #include <stdexcept>
+#include <fstream>
+#include <filesystem>
 
 LifeGrid::LifeGrid(int width, int height) : width_(width), height_(height) {
     if (width < 1 || width > 200 || height < 1 || height > 100) throw std::invalid_argument("grid must be 1..200 wide and 1..100 high");
@@ -53,4 +55,34 @@ std::string LifeGrid::render() const {
     std::ostringstream output;
     for (int y = 0; y < height_; ++y) { for (int x = 0; x < width_; ++x) output << (alive(x, y) ? "██" : "  "); output << '\n'; }
     return output.str();
+}
+
+std::string LifeGrid::plain() const {
+    std::ostringstream output;
+    for (int y = 0; y < height_; ++y) { for (int x = 0; x < width_; ++x) output << (alive(x, y) ? '#' : '.'); output << '\n'; }
+    return output.str();
+}
+
+LifeGrid loadPlain(const std::string& path) {
+    std::ifstream input(path); if (!input) throw std::runtime_error("could not open load file: " + path);
+    std::error_code sizeError; const auto fileSize = std::filesystem::file_size(path, sizeError);
+    if (sizeError || fileSize > 20300) throw std::runtime_error("load file is too large or unreadable");
+    std::vector<std::string> rows; std::string row; char character;
+    auto finishRow = [&]() { if (!row.empty() && row.back() == '\r') row.pop_back(); if (row.empty()) throw std::runtime_error("load file has an empty row"); rows.push_back(row); row.clear(); };
+    while (input.get(character)) { if (character == '\n') finishRow(); else { if (row.size() >= 200 && character != '\r') throw std::runtime_error("load file row exceeds 200 columns"); row.push_back(character); } }
+    if (input.bad()) throw std::runtime_error("could not read load file: " + path);
+    if (!row.empty()) finishRow();
+    if (rows.empty()) throw std::runtime_error("load file is empty");
+    const size_t width = rows.front().size(); if (width == 0) throw std::runtime_error("load file has zero width");
+    if (rows.size() > 100 || width > 200) throw std::runtime_error("loaded grid exceeds 200x100 bounds");
+    for (const auto& line : rows) { if (line.size() != width) throw std::runtime_error("load file rows are ragged"); for (char cell : line) if (cell != '.' && cell != '#') throw std::runtime_error("load file may contain only . and #"); }
+    LifeGrid grid(static_cast<int>(width), static_cast<int>(rows.size()));
+    for (int y = 0; y < grid.height(); ++y) for (int x = 0; x < grid.width(); ++x) grid.set(x, y, rows[y][x] == '#');
+    return grid;
+}
+
+void savePlain(const LifeGrid& grid, const std::string& path, bool force) {
+    if (!force && std::filesystem::exists(path)) throw std::runtime_error("save file already exists; pass --force to overwrite");
+    std::ofstream output(path, std::ios::trunc); if (!output) throw std::runtime_error("could not open save file: " + path);
+    output << grid.plain(); if (!output) throw std::runtime_error("could not write save file: " + path);
 }
