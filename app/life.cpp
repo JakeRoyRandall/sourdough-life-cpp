@@ -63,6 +63,23 @@ std::string LifeGrid::plain() const {
     return output.str();
 }
 
+std::string LifeGrid::svg(int generation) const {
+    int live = 0; for (uint8_t cell : cells_) live += cell != 0;
+    const int cellSize = 24, padding = 28, legendHeight = 58;
+    const int canvasWidth = std::max(620, width_ * cellSize + padding * 2);
+    const int gridX = (canvasWidth - width_ * cellSize) / 2;
+    std::ostringstream output;
+    output << "<svg xmlns=\"http://www.w3.org/2000/svg\" viewBox=\"0 0 " << canvasWidth << " " << (height_ * cellSize + padding * 2 + legendHeight) << "\" role=\"img\" aria-labelledby=\"title desc\">";
+    output << "<title id=\"title\">Sourdough Life generation " << generation << "</title><desc id=\"desc\">Finite kitchen counter grid with " << live << " live cells; outside the border is always dead.</desc>";
+    output << "<rect width=\"100%\" height=\"100%\" fill=\"#f5ead8\"/><rect x=\"" << gridX - 8 << "\" y=\"" << padding - 8 << "\" width=\"" << width_ * cellSize + 16 << "\" height=\"" << height_ * cellSize + 16 << "\" rx=\"12\" fill=\"#d7b98c\" stroke=\"#30261e\" stroke-width=\"4\"/>";
+    for (int y = 0; y < height_; ++y) for (int x = 0; x < width_; ++x) {
+        output << "<rect x=\"" << gridX + x * cellSize << "\" y=\"" << padding + y * cellSize << "\" width=\"" << cellSize - 1 << "\" height=\"" << cellSize - 1 << "\" fill=\"" << (alive(x, y) ? "#d95f43" : "#f8f1e5") << "\"/>";
+    }
+    int footerY = padding + height_ * cellSize + 28;
+    output << "<g font-family=\"ui-monospace,Menlo,monospace\" fill=\"#30261e\"><text x=\"" << padding << "\" y=\"" << footerY << "\" font-size=\"14\" font-weight=\"700\">SOURDOUGH LIFE · GENERATION " << generation << " · LIVE CELLS " << live << "</text><circle cx=\"" << padding << "\" cy=\"" << footerY + 22 << "\" r=\"6\" fill=\"#d95f43\"/><text x=\"" << padding + 14 << "\" y=\"" << footerY + 27 << "\" font-size=\"11\">live culture</text><rect x=\"" << padding + 112 << "\" y=\"" << footerY + 16 << "\" width=\"12\" height=\"12\" fill=\"#f8f1e5\" stroke=\"#30261e\"/><text x=\"" << padding + 130 << "\" y=\"" << footerY + 27 << "\" font-size=\"11\">finite dead boundary</text></g></svg>";
+    return output.str();
+}
+
 LifeGrid loadPlain(const std::string& path) {
     std::ifstream input(path); if (!input) throw std::runtime_error("could not open load file: " + path);
     std::error_code sizeError; const auto fileSize = std::filesystem::file_size(path, sizeError);

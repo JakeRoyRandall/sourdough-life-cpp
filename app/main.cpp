@@ -3,10 +3,12 @@
 #include <iostream>
 #include <stdexcept>
 #include <string>
+#include <filesystem>
+#include <fstream>
 
-struct Options { int width = 20, height = 10, steps = 8; uint32_t seed = 2020; std::string pattern = "random", load, save; bool force = false, loadMode = false, widthSet = false, heightSet = false, seedSet = false, patternSet = false; };
+struct Options { int width = 20, height = 10, steps = 8; uint32_t seed = 2020; std::string pattern = "random", load, save, svg; bool force = false, loadMode = false, widthSet = false, heightSet = false, seedSet = false, patternSet = false; };
 
-static void usage() { std::cout << "Sourdough Life — a pure toy cellular automaton\nUsage: sourdough-life [--width N] [--height N] [--steps N] [--seed N] [--pattern random|block|blinker|glider] [--load FILE] [--save FILE] [--force]\nLoad/save files are strict rectangular .# grids; loading takes dimensions from the file.\nFinite dead boundaries; no torus wrapping.\n"; }
+static void usage() { std::cout << "Sourdough Life — a pure toy cellular automaton\nUsage: sourdough-life [--width N] [--height N] [--steps N] [--seed N] [--pattern random|block|blinker|glider] [--load FILE] [--save FILE] [--svg FILE] [--force]\nLoad/save files are strict rectangular .# grids; loading takes dimensions from the file.\nFinite dead boundaries; no torus wrapping.\n"; }
 static int positive(const std::string& value, const char* flag) { size_t used = 0; int parsed; try { parsed = std::stoi(value, &used); } catch (...) { throw std::runtime_error(std::string(flag) + " needs a whole number"); } if (used != value.size() || parsed <= 0) throw std::runtime_error(std::string(flag) + " must be positive"); return parsed; }
 static Options parse(int argc, char** argv) {
     Options options;
@@ -22,6 +24,7 @@ static Options parse(int argc, char** argv) {
         else if (flag == "--pattern") { options.pattern = value; options.patternSet = true; if (options.pattern != "random" && options.pattern != "block" && options.pattern != "blinker" && options.pattern != "glider") throw std::runtime_error("--pattern must be random, block, blinker, or glider"); }
         else if (flag == "--load") { options.load = value; options.loadMode = true; }
         else if (flag == "--save") options.save = value;
+        else if (flag == "--svg") options.svg = value;
         else throw std::runtime_error("unknown option: " + flag);
     }
     if (options.loadMode && (options.widthSet || options.heightSet || options.seedSet || options.patternSet)) throw std::runtime_error("--load cannot be combined with --width, --height, --seed, or --pattern");
@@ -36,5 +39,6 @@ int main(int argc, char** argv) {
         std::cout << "SOURDOUGH LIFE · " << (options.loadMode ? "loaded grid" : "seed " + std::to_string(options.seed)) << " · steps " << options.steps << "\n" << grid.render();
         grid.run(options.steps); std::cout << "\nAFTER " << options.steps << " STEPS\n" << grid.render();
         if (!options.save.empty()) savePlain(grid, options.save, options.force);
+        if (!options.svg.empty()) { if (!options.force && std::filesystem::exists(options.svg)) throw std::runtime_error("SVG file already exists; pass --force to overwrite"); std::ofstream svgFile(options.svg, std::ios::trunc); if (!svgFile) throw std::runtime_error("could not open SVG file: " + options.svg); svgFile << grid.svg(options.steps); if (!svgFile) throw std::runtime_error("could not write SVG file: " + options.svg); }
     } catch (const std::exception& error) { std::cerr << "Sourdough Life: " << error.what() << '\n'; return 2; }
 }

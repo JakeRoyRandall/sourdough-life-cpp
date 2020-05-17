@@ -16,6 +16,7 @@ public:
     void seed(uint32_t value, double density = 0.28);
     bool place(const std::string& pattern, int x, int y);
     std::string plain() const;
+    std::string svg(int generation) const;
     std::string render() const;
 
 private:
