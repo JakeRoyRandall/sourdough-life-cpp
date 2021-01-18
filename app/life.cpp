@@ -6,7 +6,7 @@
 #include <fstream>
 #include <filesystem>
 
-LifeGrid::LifeGrid(int width, int height) : width_(width), height_(height) {
+LifeGrid::LifeGrid(int width, int height, bool wrap) : width_(width), height_(height), wrap_(wrap) {
     if (width < 1 || width > 200 || height < 1 || height > 100) throw std::invalid_argument("grid must be 1..200 wide and 1..100 high");
     cells_.assign(static_cast<size_t>(width) * static_cast<size_t>(height), 0);
 }
@@ -18,8 +18,15 @@ void LifeGrid::set(int x, int y, bool value) { if (x >= 0 && x < width_ && y >= 
 void LifeGrid::clear() { std::fill(cells_.begin(), cells_.end(), 0); }
 
 int LifeGrid::neighbors(int x, int y) const {
-    int count = 0;
-    for (int dy = -1; dy <= 1; ++dy) for (int dx = -1; dx <= 1; ++dx) if ((dx || dy) && alive(x + dx, y + dy)) ++count;
+    int count = 0; std::vector<int> seen;
+    for (int dy = -1; dy <= 1; ++dy) for (int dx = -1; dx <= 1; ++dx) if (dx || dy) {
+        int nx = x + dx, ny = y + dy;
+        if (wrap_) { nx = (nx % width_ + width_) % width_; ny = (ny % height_ + height_) % height_; }
+        if (nx == x && ny == y) continue;
+        if (!alive(nx, ny)) continue;
+        int cell = ny * width_ + nx;
+        if (std::find(seen.begin(), seen.end(), cell) == seen.end()) { seen.push_back(cell); ++count; }
+    }
     return count;
 }
 
@@ -76,11 +83,11 @@ std::string LifeGrid::svg(int generation) const {
         output << "<rect x=\"" << gridX + x * cellSize << "\" y=\"" << padding + y * cellSize << "\" width=\"" << cellSize - 1 << "\" height=\"" << cellSize - 1 << "\" fill=\"" << (alive(x, y) ? "#d95f43" : "#f8f1e5") << "\"/>";
     }
     int footerY = padding + height_ * cellSize + 28;
-    output << "<g font-family=\"ui-monospace,Menlo,monospace\" fill=\"#30261e\"><text x=\"" << padding << "\" y=\"" << footerY << "\" font-size=\"14\" font-weight=\"700\">SOURDOUGH LIFE · GENERATION " << generation << " · LIVE CELLS " << live << "</text><circle cx=\"" << padding << "\" cy=\"" << footerY + 22 << "\" r=\"6\" fill=\"#d95f43\"/><text x=\"" << padding + 14 << "\" y=\"" << footerY + 27 << "\" font-size=\"11\">live culture</text><rect x=\"" << padding + 112 << "\" y=\"" << footerY + 16 << "\" width=\"12\" height=\"12\" fill=\"#f8f1e5\" stroke=\"#30261e\"/><text x=\"" << padding + 130 << "\" y=\"" << footerY + 27 << "\" font-size=\"11\">finite dead boundary</text></g></svg>";
+    output << "<g font-family=\"ui-monospace,Menlo,monospace\" fill=\"#30261e\"><text x=\"" << padding << "\" y=\"" << footerY << "\" font-size=\"14\" font-weight=\"700\">SOURDOUGH LIFE · GENERATION " << generation << " · LIVE CELLS " << live << "</text><circle cx=\"" << padding << "\" cy=\"" << footerY + 22 << "\" r=\"6\" fill=\"#d95f43\"/><text x=\"" << padding + 14 << "\" y=\"" << footerY + 27 << "\" font-size=\"11\">live culture</text><rect x=\"" << padding + 112 << "\" y=\"" << footerY + 16 << "\" width=\"12\" height=\"12\" fill=\"#f8f1e5\" stroke=\"#30261e\"/><text x=\"" << padding + 130 << "\" y=\"" << footerY + 27 << "\" font-size=\"11\">" << (wrap_ ? "toroidal wrap boundary" : "finite dead boundary") << "</text></g></svg>";
     return output.str();
 }
 
-LifeGrid loadPlain(const std::string& path) {
+LifeGrid loadPlain(const std::string& path, bool wrap) {
     std::ifstream input(path); if (!input) throw std::runtime_error("could not open load file: " + path);
     std::error_code sizeError; const auto fileSize = std::filesystem::file_size(path, sizeError);
     if (sizeError || fileSize > 20300) throw std::runtime_error("load file is too large or unreadable");
@@ -93,7 +100,7 @@ LifeGrid loadPlain(const std::string& path) {
     const size_t width = rows.front().size(); if (width == 0) throw std::runtime_error("load file has zero width");
     if (rows.size() > 100 || width > 200) throw std::runtime_error("loaded grid exceeds 200x100 bounds");
     for (const auto& line : rows) { if (line.size() != width) throw std::runtime_error("load file rows are ragged"); for (char cell : line) if (cell != '.' && cell != '#') throw std::runtime_error("load file may contain only . and #"); }
-    LifeGrid grid(static_cast<int>(width), static_cast<int>(rows.size()));
+    LifeGrid grid(static_cast<int>(width), static_cast<int>(rows.size()), wrap);
     for (int y = 0; y < grid.height(); ++y) for (int x = 0; x < grid.width(); ++x) grid.set(x, y, rows[y][x] == '#');
     return grid;
 }

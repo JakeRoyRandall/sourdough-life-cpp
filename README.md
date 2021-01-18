@@ -10,11 +10,12 @@ Build and run:
 clang++ -std=c++17 -Wall -Wextra -Werror app/main.cpp app/life.cpp -o sourdough-life
 ./sourdough-life --width 24 --height 10 --steps 12 --seed 42
 ./sourdough-life --pattern glider --width 12 --height 10 --steps 4
+./sourdough-life --pattern blinker --width 5 --height 5 --steps 8 --wrap
 ./sourdough-life --load kitchen-grid.txt --steps 4 --save evolved-grid.txt --force
 ./sourdough-life --pattern glider --width 12 --height 10 --steps 4 --svg evolved.svg --force
 ```
 
-Patterns are `random`, `block`, `blinker`, and `glider`. The board has finite dead boundaries: cells outside the printed rectangle are always dead, with no torus wrapping. Dimensions are bounded to 200×100 and steps to 10,000.
+Patterns are `random`, `block`, `blinker`, and `glider`. The default board has finite dead boundaries: cells outside the printed rectangle are always dead. `--wrap` enables toroidal edges; wrapped neighbors are deduplicated, so tiny 1×1 and 1×2 boards never count the same cell multiple times. Dimensions are bounded to 200×100 and steps to 10,000. Plain `.#` grid saves contain cells only; boundary mode remains a CLI choice when loading.
 
 `--save FILE` writes the final generation as a strict rectangular `.#` grid. Existing files are protected unless `--force` is supplied. `--load FILE` imports dimensions and cells from a nonempty rectangular `.#` grid; ragged rows, other characters, oversized files, and conflicts with `--width`, `--height`, `--seed`, or `--pattern` are rejected.
 
