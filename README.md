@@ -15,6 +15,7 @@ clang++ -std=c++17 -Wall -Wextra -Werror app/main.cpp app/life.cpp -o sourdough-
 ./sourdough-life --pattern glider --width 12 --height 10 --steps 4 --svg evolved.svg --force
 ./sourdough-life --pattern blinker --width 7 --height 7 --steps 20 --detect-cycle
 ./sourdough-life --pattern glider --width 12 --height 10 --steps 4 --stats
+./sourdough-life --pattern glider --width 12 --height 10 --steps 12 --rule B36/S23
 ```
 
 Patterns are `random`, `block`, `blinker`, and `glider`. The default board has finite dead boundaries: cells outside the printed rectangle are always dead. `--wrap` enables toroidal edges; wrapped neighbors are deduplicated, so tiny 1×1 and 1×2 boards never count the same cell multiple times. Dimensions are bounded to 200×100 and steps to 10,000. Plain `.#` grid saves contain cells only; boundary mode remains a CLI choice when loading.
@@ -26,6 +27,8 @@ Patterns are `random`, `block`, `blinker`, and `glider`. The default board has f
 `--detect-cycle` remembers complete grids, including the selected finite or toroidal boundary mode, and stops at the first repeated state with its transient length and period. The remembered-state table uses a conservative estimated 32 MiB state budget; if the budget is reached, detection is disabled, the table is released, and the program reports that it is continuing the ordinary simulation. The `AFTER` line and SVG generation use the actual executed generation after an early stop.
 
 `--stats` adds an initial and final summary without changing the default output. Each summary reports living-cell count and the smallest axis-aligned bounding rectangle using zero-based coordinates; an empty grid is reported explicitly as `bounds empty`. The final summary reflects an early cycle stop when `--detect-cycle` is also used.
+
+`--rule B3/S23` selects a strict outer-totalistic rule. Birth and survival digits must be unique values from 0 through 8; either section may be empty (`B/S23`, `B3/S`, or `B/S`), and digits are canonically sorted when reported. The default rule is Conway `B3/S23`, and custom rules are reported in the CLI header and SVG footer. Rules apply equally to finite and toroidal grids and are part of cycle state identity.
 
 Tests compile and run the same `LifeGrid` implementation:
 

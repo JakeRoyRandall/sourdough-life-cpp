@@ -5,10 +5,11 @@
 
 class LifeGrid {
 public:
-    LifeGrid(int width, int height, bool wrap = false);
+    LifeGrid(int width, int height, bool wrap = false, const std::string& rule = "B3/S23");
     int width() const { return width_; }
     int height() const { return height_; }
     bool wraps() const { return wrap_; }
+    const std::string& rule() const { return rule_; }
     bool alive(int x, int y) const;
     void set(int x, int y, bool value = true);
     void clear();
@@ -22,10 +23,12 @@ public:
 
 private:
     int width_, height_; bool wrap_;
+    bool birth_[9] = {}, survive_[9] = {};
+    std::string rule_;
     std::vector<uint8_t> cells_;
     int index(int x, int y) const { return y * width_ + x; }
     int neighbors(int x, int y) const;
 };
 
-LifeGrid loadPlain(const std::string& path, bool wrap = false);
+LifeGrid loadPlain(const std::string& path, bool wrap = false, const std::string& rule = "B3/S23");
 void savePlain(const LifeGrid& grid, const std::string& path, bool force);

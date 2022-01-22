@@ -12,9 +12,9 @@
 #define SOURDOUGH_CYCLE_MEMORY_CAP (32u * 1024u * 1024u)
 #endif
 
-struct Options { int width = 20, height = 10, steps = 8; uint32_t seed = 2020; std::string pattern = "random", load, save, svg; bool force = false, wrap = false, detectCycle = false, stats = false, loadMode = false, widthSet = false, heightSet = false, seedSet = false, patternSet = false; };
+struct Options { int width = 20, height = 10, steps = 8; uint32_t seed = 2020; std::string pattern = "random", rule = "B3/S23", load, save, svg; bool force = false, wrap = false, detectCycle = false, stats = false, loadMode = false, widthSet = false, heightSet = false, seedSet = false, patternSet = false; };
 
-static void usage() { std::cout << "Sourdough Life — a pure toy cellular automaton\nUsage: sourdough-life [--width N] [--height N] [--steps N] [--seed N] [--pattern random|block|blinker|glider] [--load FILE] [--save FILE] [--svg FILE] [--wrap] [--detect-cycle] [--stats] [--force]\nLoad/save files are strict rectangular .# grids; loading takes dimensions from the file.\nFinite dead boundaries by default; --wrap enables toroidal edges.\n--detect-cycle stops at the first repeated grid, within a 32 MiB estimated state budget.\n--stats prints initial and final living-cell counts and bounding rectangles.\n"; }
+static void usage() { std::cout << "Sourdough Life — a pure toy cellular automaton\nUsage: sourdough-life [--width N] [--height N] [--steps N] [--seed N] [--pattern random|block|blinker|glider] [--rule B3/S23] [--load FILE] [--save FILE] [--svg FILE] [--wrap] [--detect-cycle] [--stats] [--force]\nLoad/save files are strict rectangular .# grids; loading takes dimensions from the file.\nFinite dead boundaries by default; --wrap enables toroidal edges.\n--detect-cycle stops at the first repeated grid, within a 32 MiB estimated state budget.\n--stats prints initial and final living-cell counts and bounding rectangles.\n"; }
 static int positive(const std::string& value, const char* flag) { size_t used = 0; int parsed; try { parsed = std::stoi(value, &used); } catch (...) { throw std::runtime_error(std::string(flag) + " needs a whole number"); } if (used != value.size() || parsed <= 0) throw std::runtime_error(std::string(flag) + " must be positive"); return parsed; }
 static Options parse(int argc, char** argv) {
     Options options;
@@ -31,6 +31,7 @@ static Options parse(int argc, char** argv) {
         else if (flag == "--steps") options.steps = positive(value, "--steps");
         else if (flag == "--seed") { size_t used = 0; unsigned long parsed; try { parsed = std::stoul(value, &used); } catch (...) { throw std::runtime_error("--seed needs a whole number"); } if (used != value.size() || parsed > 0xffffffffUL) throw std::runtime_error("--seed needs a whole number"); options.seed = static_cast<uint32_t>(parsed); options.seedSet = true; }
         else if (flag == "--pattern") { options.pattern = value; options.patternSet = true; if (options.pattern != "random" && options.pattern != "block" && options.pattern != "blinker" && options.pattern != "glider") throw std::runtime_error("--pattern must be random, block, blinker, or glider"); }
+        else if (flag == "--rule") options.rule = value;
         else if (flag == "--load") { options.load = value; options.loadMode = true; }
         else if (flag == "--save") options.save = value;
         else if (flag == "--svg") options.svg = value;
@@ -53,9 +54,11 @@ static void printStats(const char* label, const LifeGrid& grid) {
 
 int main(int argc, char** argv) {
     try {
-        Options options = parse(argc, argv); LifeGrid grid = options.loadMode ? loadPlain(options.load, options.wrap) : LifeGrid(options.width, options.height, options.wrap);
+        Options options = parse(argc, argv); LifeGrid grid = options.loadMode ? loadPlain(options.load, options.wrap, options.rule) : LifeGrid(options.width, options.height, options.wrap, options.rule);
         if (!options.loadMode && options.pattern == "random") grid.seed(options.seed); else if (!options.loadMode && !grid.place(options.pattern, options.width / 2 - 1, options.height / 2 - 1)) throw std::runtime_error("could not place pattern");
-        std::cout << "SOURDOUGH LIFE · " << (options.loadMode ? "loaded grid" : "seed " + std::to_string(options.seed)) << " · " << (options.wrap ? "wrap" : "finite") << " · steps " << options.steps << "\n" << grid.render();
+        std::cout << "SOURDOUGH LIFE · " << (options.loadMode ? "loaded grid" : "seed " + std::to_string(options.seed)) << " · " << (options.wrap ? "wrap" : "finite") << " · steps " << options.steps;
+        if (grid.rule() != "B3/S23") std::cout << " · rule " << grid.rule();
+        std::cout << "\n" << grid.render();
         if (options.stats) printStats("INITIAL", grid);
         int executedSteps = 0;
         if (!options.detectCycle) {
@@ -66,7 +69,7 @@ int main(int argc, char** argv) {
             std::unordered_map<std::string, int> seen;
             size_t rememberedBytes = 0;
             bool limitReported = false;
-            auto stateKey = [&grid, &options]() { return std::string(options.wrap ? "W:" : "F:") + grid.plain(); };
+            auto stateKey = [&grid, &options]() { return std::string(options.wrap ? "W:" : "F:") + grid.rule() + ":" + grid.plain(); };
             auto stateCost = [](const std::string& key) { return key.size() + sizeof(std::string) + sizeof(int) + 64u; };
             std::string initialKey = stateKey();
             if (stateCost(initialKey) <= memoryCap) {

@@ -60,4 +60,23 @@ glider_stats=$($BIN --pattern glider --width 10 --height 10 --steps 1 --stats)
 printf '%s\n' "$glider_stats" | grep -F 'INITIAL STATS · live 5 · bounds x=4..6 y=4..6 (3x3)' >/dev/null
 printf '%s\n' "$glider_stats" | grep -F 'FINAL STATS · live 5 · bounds x=4..6 y=5..7 (3x3)' >/dev/null
 
+rule_grid=${TMPDIR:-/tmp}/sourdough-rule-grid.txt
+printf '.....\n.###.\n.#.#.\n..#..\n.....\n' > "$rule_grid"
+rule_output=$($BIN --load "$rule_grid" --rule B63/S32 --steps 1)
+printf '%s\n' "$rule_output" | grep -F '· rule B36/S23' >/dev/null
+rule_svg=${TMPDIR:-/tmp}/sourdough-rule.svg
+$BIN --load "$rule_grid" --rule B63/S32 --steps 1 --svg "$rule_svg" --force >/dev/null
+grep -F 'RULE B36/S23' "$rule_svg" >/dev/null
+if $BIN --rule B33/S23 >/dev/null 2>&1; then
+    echo 'duplicate rule digit was accepted' >&2
+    exit 1
+fi
+if $BIN --rule B3/S2x >/dev/null 2>&1; then
+    echo 'invalid rule character was accepted' >&2
+    exit 1
+fi
+for empty_rule in B/S B3/S B/S23; do
+    $BIN --width 3 --height 3 --rule "$empty_rule" --steps 1 >/dev/null
+done
+
 echo 'cycle CLI tests passed: block period-1, blinker period-2, empty grid, glider cutoff, parity, SVG generation'

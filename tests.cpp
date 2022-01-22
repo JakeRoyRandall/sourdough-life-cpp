@@ -26,5 +26,9 @@ int main() {
     LifeGrid finiteCorner(3, 3), wrappedCorner(3, 3, true); finiteCorner.set(0, 0); finiteCorner.set(1, 0); finiteCorner.set(0, 1); wrappedCorner.set(0, 0); wrappedCorner.set(1, 0); wrappedCorner.set(0, 1); finiteCorner.step(); wrappedCorner.step(); assert(finiteCorner.render() != wrappedCorner.render());
     LifeGrid oneCell(1, 1, true); oneCell.set(0, 0); oneCell.step(); assert(living(oneCell) == 0); LifeGrid twoCells(1, 2, true); twoCells.set(0, 0); twoCells.set(0, 1); twoCells.step(); assert(living(twoCells) == 0);
     assert(finiteEdge.svg(1).find("finite dead boundary") != std::string::npos); assert(wrappedEdge.svg(1).find("toroidal wrap boundary") != std::string::npos);
+    LifeGrid classicRule(5, 5), highLife(5, 5, false, "B63/S32"); const int six[][2] = {{1, 1}, {2, 1}, {3, 1}, {1, 2}, {3, 2}, {2, 3}}; for (const auto& cell : six) { classicRule.set(cell[0], cell[1]); highLife.set(cell[0], cell[1]); } classicRule.step(); highLife.step(); assert(!classicRule.alive(2, 2)); assert(highLife.alive(2, 2)); assert(highLife.rule() == "B36/S23"); assert(highLife.svg(1).find("RULE B36/S23") != std::string::npos); assert(highLife.svg(1).find("viewBox=\"0 0 620 258\"") != std::string::npos); assert(LifeGrid(5, 5, true).svg(1).find("Toroidal kitchen counter grid") != std::string::npos);
+    assert(LifeGrid(5, 5, false, "B/S23").rule() == "B/S23"); assert(LifeGrid(5, 5, false, "B3/S").rule() == "B3/S"); assert(LifeGrid(5, 5, false, "B/S").rule() == "B/S");
+    rejected = false; try { LifeGrid invalidRule(5, 5, false, "B33/S23"); } catch (const std::invalid_argument&) { rejected = true; } assert(rejected);
+    rejected = false; try { LifeGrid invalidRule(5, 5, false, "B3/S2x"); } catch (const std::invalid_argument&) { rejected = true; } assert(rejected);
     std::cout << "tests passed: block, blinker period-2, glider movement, finite boundary, seeded determinism\n";
 }
