@@ -79,4 +79,29 @@ for empty_rule in B/S B3/S B/S23; do
     $BIN --width 3 --height 3 --rule "$empty_rule" --steps 1 >/dev/null
 done
 
+density_zero=$($BIN --width 4 --height 3 --seed 17 --density 0 --steps 1 --stats)
+printf '%s\n' "$density_zero" | grep -F 'INITIAL STATS · live 0 · bounds empty' >/dev/null
+density_full=$($BIN --width 4 --height 3 --seed 17 --density 1 --steps 1 --stats)
+printf '%s\n' "$density_full" | grep -F 'INITIAL STATS · live 12 · bounds x=0..3 y=0..2 (4x3)' >/dev/null
+density_a=$($BIN --width 8 --height 5 --seed 17 --density 0.5 --steps 2)
+density_b=$($BIN --width 8 --height 5 --seed 17 --density 0.5 --steps 2)
+[ "$density_a" = "$density_b" ]
+default_seed=$($BIN --width 8 --height 5 --seed 17 --steps 2)
+explicit_default=$($BIN --width 8 --height 5 --seed 17 --density 0.28 --steps 2)
+[ "$default_seed" = "$explicit_default" ]
+for bad_density in nan inf -0.1 1.1; do
+    if $BIN --density "$bad_density" >/dev/null 2>&1; then
+        echo "invalid density was accepted: $bad_density" >&2
+        exit 1
+    fi
+done
+if $BIN --pattern block --density 0.5 >/dev/null 2>&1; then
+    echo 'density was accepted with a named pattern' >&2
+    exit 1
+fi
+if $BIN --load "$empty" --density 0.5 >/dev/null 2>&1; then
+    echo 'density was accepted with a loaded grid' >&2
+    exit 1
+fi
+
 echo 'cycle CLI tests passed: block period-1, blinker period-2, empty grid, glider cutoff, parity, SVG generation'

@@ -16,6 +16,7 @@ clang++ -std=c++17 -Wall -Wextra -Werror app/main.cpp app/life.cpp -o sourdough-
 ./sourdough-life --pattern blinker --width 7 --height 7 --steps 20 --detect-cycle
 ./sourdough-life --pattern glider --width 12 --height 10 --steps 4 --stats
 ./sourdough-life --pattern glider --width 12 --height 10 --steps 12 --rule B36/S23
+./sourdough-life --width 24 --height 10 --seed 42 --density 0.18 --steps 12
 ```
 
 Patterns are `random`, `block`, `blinker`, and `glider`. The default board has finite dead boundaries: cells outside the printed rectangle are always dead. `--wrap` enables toroidal edges; wrapped neighbors are deduplicated, so tiny 1×1 and 1×2 boards never count the same cell multiple times. Dimensions are bounded to 200×100 and steps to 10,000. Plain `.#` grid saves contain cells only; boundary mode remains a CLI choice when loading.
@@ -29,6 +30,8 @@ Patterns are `random`, `block`, `blinker`, and `glider`. The default board has f
 `--stats` adds an initial and final summary without changing the default output. Each summary reports living-cell count and the smallest axis-aligned bounding rectangle using zero-based coordinates; an empty grid is reported explicitly as `bounds empty`. The final summary reflects an early cycle stop when `--detect-cycle` is also used.
 
 `--rule B3/S23` selects a strict outer-totalistic rule. Birth and survival digits must be unique values from 0 through 8; either section may be empty (`B/S23`, `B3/S`, or `B/S`), and digits are canonically sorted when reported. The default rule is Conway `B3/S23`, and custom rules are reported in the CLI header and SVG footer. Rules apply equally to finite and toroidal grids and are part of cycle state identity.
+
+`--density 0..1` changes the initial live-cell probability for the seeded random pattern. It defaults to `0.28`, so the default seeded run is unchanged; `0` creates an empty board and `1` fills it. The value must be finite and is rejected with loaded grids or named patterns such as `block`.
 
 Tests compile and run the same `LifeGrid` implementation:
 

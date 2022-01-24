@@ -1,6 +1,7 @@
 #include "life.hpp"
 #include <cstdlib>
 #include <algorithm>
+#include <cmath>
 #include <iostream>
 #include <stdexcept>
 #include <string>
@@ -12,9 +13,9 @@
 #define SOURDOUGH_CYCLE_MEMORY_CAP (32u * 1024u * 1024u)
 #endif
 
-struct Options { int width = 20, height = 10, steps = 8; uint32_t seed = 2020; std::string pattern = "random", rule = "B3/S23", load, save, svg; bool force = false, wrap = false, detectCycle = false, stats = false, loadMode = false, widthSet = false, heightSet = false, seedSet = false, patternSet = false; };
+struct Options { int width = 20, height = 10, steps = 8; uint32_t seed = 2020; double density = 0.28; std::string pattern = "random", rule = "B3/S23", load, save, svg; bool force = false, wrap = false, detectCycle = false, stats = false, loadMode = false, widthSet = false, heightSet = false, seedSet = false, patternSet = false, densitySet = false; };
 
-static void usage() { std::cout << "Sourdough Life — a pure toy cellular automaton\nUsage: sourdough-life [--width N] [--height N] [--steps N] [--seed N] [--pattern random|block|blinker|glider] [--rule B3/S23] [--load FILE] [--save FILE] [--svg FILE] [--wrap] [--detect-cycle] [--stats] [--force]\nLoad/save files are strict rectangular .# grids; loading takes dimensions from the file.\nFinite dead boundaries by default; --wrap enables toroidal edges.\n--detect-cycle stops at the first repeated grid, within a 32 MiB estimated state budget.\n--stats prints initial and final living-cell counts and bounding rectangles.\n"; }
+static void usage() { std::cout << "Sourdough Life — a pure toy cellular automaton\nUsage: sourdough-life [--width N] [--height N] [--steps N] [--seed N] [--density 0..1] [--pattern random|block|blinker|glider] [--rule B3/S23] [--load FILE] [--save FILE] [--svg FILE] [--wrap] [--detect-cycle] [--stats] [--force]\nLoad/save files are strict rectangular .# grids; loading takes dimensions from the file.\nFinite dead boundaries by default; --wrap enables toroidal edges.\n--detect-cycle stops at the first repeated grid, within a 32 MiB estimated state budget.\n--stats prints initial and final living-cell counts and bounding rectangles.\n"; }
 static int positive(const std::string& value, const char* flag) { size_t used = 0; int parsed; try { parsed = std::stoi(value, &used); } catch (...) { throw std::runtime_error(std::string(flag) + " needs a whole number"); } if (used != value.size() || parsed <= 0) throw std::runtime_error(std::string(flag) + " must be positive"); return parsed; }
 static Options parse(int argc, char** argv) {
     Options options;
@@ -29,6 +30,7 @@ static Options parse(int argc, char** argv) {
         if (flag == "--width") { options.width = positive(value, "--width"); options.widthSet = true; }
         else if (flag == "--height") { options.height = positive(value, "--height"); options.heightSet = true; }
         else if (flag == "--steps") options.steps = positive(value, "--steps");
+        else if (flag == "--density") { size_t used = 0; try { options.density = std::stod(value, &used); } catch (...) { throw std::runtime_error("--density needs a finite number from 0 to 1"); } if (used != value.size() || !std::isfinite(options.density) || options.density < 0.0 || options.density > 1.0) throw std::runtime_error("--density must be a finite number from 0 to 1"); options.densitySet = true; }
         else if (flag == "--seed") { size_t used = 0; unsigned long parsed; try { parsed = std::stoul(value, &used); } catch (...) { throw std::runtime_error("--seed needs a whole number"); } if (used != value.size() || parsed > 0xffffffffUL) throw std::runtime_error("--seed needs a whole number"); options.seed = static_cast<uint32_t>(parsed); options.seedSet = true; }
         else if (flag == "--pattern") { options.pattern = value; options.patternSet = true; if (options.pattern != "random" && options.pattern != "block" && options.pattern != "blinker" && options.pattern != "glider") throw std::runtime_error("--pattern must be random, block, blinker, or glider"); }
         else if (flag == "--rule") options.rule = value;
@@ -37,7 +39,8 @@ static Options parse(int argc, char** argv) {
         else if (flag == "--svg") options.svg = value;
         else throw std::runtime_error("unknown option: " + flag);
     }
-    if (options.loadMode && (options.widthSet || options.heightSet || options.seedSet || options.patternSet)) throw std::runtime_error("--load cannot be combined with --width, --height, --seed, or --pattern");
+    if (options.loadMode && (options.widthSet || options.heightSet || options.seedSet || options.patternSet || options.densitySet)) throw std::runtime_error("--load cannot be combined with --width, --height, --seed, --density, or --pattern");
+    if (options.densitySet && options.patternSet && options.pattern != "random") throw std::runtime_error("--density requires the random pattern");
     if (options.width > 200 || options.height > 100 || options.steps > 10000) throw std::runtime_error("size or steps exceed the safe bounds");
     return options;
 }
@@ -55,7 +58,7 @@ static void printStats(const char* label, const LifeGrid& grid) {
 int main(int argc, char** argv) {
     try {
         Options options = parse(argc, argv); LifeGrid grid = options.loadMode ? loadPlain(options.load, options.wrap, options.rule) : LifeGrid(options.width, options.height, options.wrap, options.rule);
-        if (!options.loadMode && options.pattern == "random") grid.seed(options.seed); else if (!options.loadMode && !grid.place(options.pattern, options.width / 2 - 1, options.height / 2 - 1)) throw std::runtime_error("could not place pattern");
+        if (!options.loadMode && options.pattern == "random") grid.seed(options.seed, options.density); else if (!options.loadMode && !grid.place(options.pattern, options.width / 2 - 1, options.height / 2 - 1)) throw std::runtime_error("could not place pattern");
         std::cout << "SOURDOUGH LIFE · " << (options.loadMode ? "loaded grid" : "seed " + std::to_string(options.seed)) << " · " << (options.wrap ? "wrap" : "finite") << " · steps " << options.steps;
         if (grid.rule() != "B3/S23") std::cout << " · rule " << grid.rule();
         std::cout << "\n" << grid.render();
