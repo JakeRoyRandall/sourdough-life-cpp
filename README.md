@@ -18,6 +18,7 @@ clang++ -std=c++17 -Wall -Wextra -Werror app/main.cpp app/life.cpp -o sourdough-
 ./sourdough-life --pattern glider --width 12 --height 10 --steps 12 --rule B36/S23
 ./sourdough-life --width 24 --height 10 --seed 42 --density 0.18 --steps 12
 ./sourdough-life --width 12 --height 10 --pattern glider --at 0,0 --steps 8
+./sourdough-life --width 12 --height 10 --pattern glider --steps 8 --json
 ```
 
 Patterns are `random`, `block`, `blinker`, and `glider`. The default board has finite dead boundaries: cells outside the printed rectangle are always dead. `--wrap` enables toroidal edges; wrapped neighbors are deduplicated, so tiny 1×1 and 1×2 boards never count the same cell multiple times. Dimensions are bounded to 200×100 and steps to 10,000. Plain `.#` grid saves contain cells only; boundary mode remains a CLI choice when loading.
@@ -35,6 +36,8 @@ Patterns are `random`, `block`, `blinker`, and `glider`. The default board has f
 `--density 0..1` changes the initial live-cell probability for the seeded random pattern. It defaults to `0.28`, so the default seeded run is unchanged; `0` creates an empty board and `1` fills it. The value must be finite and is rejected with loaded grids or named patterns such as `block`.
 
 `--at X,Y` places a named pattern at an explicit zero-based, nonnegative coordinate. The pattern must fit entirely inside the board; malformed coordinates, random initialization, loaded grids, and silent clipping are rejected. Without `--at`, named patterns keep their centered placement.
+
+`--json` suppresses terminal prose and emits one final-state JSON document containing dimensions, boundary mode, canonical rule, executed generation, live-cell count, `.#` rows, and either `null` or the detected cycle's transient and period. Save and SVG exports remain available alongside JSON output.
 
 Tests compile and run the same `LifeGrid` implementation:
 

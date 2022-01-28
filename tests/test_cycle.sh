@@ -130,4 +130,27 @@ default_block=$($BIN --width 6 --height 6 --pattern block --steps 2)
 center_block=$($BIN --width 6 --height 6 --pattern block --at 2,2 --steps 2)
 [ "$default_block" = "$center_block" ]
 
+json_file=${TMPDIR:-/tmp}/sourdough-final.json
+json_save=${TMPDIR:-/tmp}/sourdough-json-grid.txt
+json_output=$($BIN --width 6 --height 6 --pattern glider --steps 2 --json --save "$json_save" --force)
+printf '%s\n' "$json_output" > "$json_file"
+python3 - "$json_file" "$json_save" <<'PY'
+import json
+import sys
+
+with open(sys.argv[1], encoding="utf-8") as stream:
+    document = json.load(stream)
+with open(sys.argv[2], encoding="utf-8") as stream:
+    saved = stream.read().splitlines()
+assert document["width"] == 6 and document["height"] == 6
+assert document["boundary"] == "finite" and document["rule"] == "B3/S23"
+assert document["generation"] == 2 and document["cycle"] is None
+assert document["grid"] == saved
+assert document["live"] == sum(row.count("#") for row in document["grid"])
+PY
+cycle_json=$($BIN --width 6 --height 6 --pattern block --steps 8 --detect-cycle --json)
+printf '%s\n' "$cycle_json" | python3 -c 'import json, sys; d=json.load(sys.stdin); assert d["generation"] == 1 and d["cycle"] == {"transient": 0, "period": 1}'
+wrap_json=$($BIN --width 6 --height 6 --pattern block --steps 1 --wrap --rule B63/S32 --json)
+printf '%s\n' "$wrap_json" | python3 -c 'import json, sys; d=json.load(sys.stdin); assert d["boundary"] == "wrap" and d["rule"] == "B36/S23"'
+
 echo 'cycle CLI tests passed: block period-1, blinker period-2, empty grid, glider cutoff, parity, SVG generation'
