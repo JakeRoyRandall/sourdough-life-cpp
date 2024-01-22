@@ -47,4 +47,17 @@ if printf '%s\n' "$cap_output" | grep -F 'CYCLE DETECTED' >/dev/null; then
 fi
 printf '%s\n' "$cap_output" | grep -F 'AFTER 8 STEPS' >/dev/null
 
+empty_stats=$($BIN --load "$empty" --steps 1 --stats)
+printf '%s\n' "$empty_stats" | grep -F 'INITIAL STATS · live 0 · bounds empty' >/dev/null
+printf '%s\n' "$empty_stats" | grep -F 'FINAL STATS · live 0 · bounds empty' >/dev/null
+
+block_stats=$($BIN --pattern block --width 6 --height 6 --steps 8 --detect-cycle --stats)
+printf '%s\n' "$block_stats" | grep -F 'INITIAL STATS · live 4 · bounds x=2..3 y=2..3 (2x2)' >/dev/null
+printf '%s\n' "$block_stats" | grep -F 'CYCLE DETECTED · transient 0 · period 1 · generation 1' >/dev/null
+printf '%s\n' "$block_stats" | grep -F 'FINAL STATS · live 4 · bounds x=2..3 y=2..3 (2x2)' >/dev/null
+
+glider_stats=$($BIN --pattern glider --width 10 --height 10 --steps 1 --stats)
+printf '%s\n' "$glider_stats" | grep -F 'INITIAL STATS · live 5 · bounds x=4..6 y=4..6 (3x3)' >/dev/null
+printf '%s\n' "$glider_stats" | grep -F 'FINAL STATS · live 5 · bounds x=4..6 y=5..7 (3x3)' >/dev/null
+
 echo 'cycle CLI tests passed: block period-1, blinker period-2, empty grid, glider cutoff, parity, SVG generation'
