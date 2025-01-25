@@ -104,4 +104,30 @@ if $BIN --load "$empty" --density 0.5 >/dev/null 2>&1; then
     exit 1
 fi
 
+origin=$($BIN --width 4 --height 4 --pattern block --at 0,0 --steps 1 --stats)
+printf '%s\n' "$origin" | grep -F 'INITIAL STATS · live 4 · bounds x=0..1 y=0..1 (2x2)' >/dev/null
+edge=$($BIN --width 3 --height 3 --pattern glider --at 0,0 --steps 1 --stats)
+printf '%s\n' "$edge" | grep -F 'INITIAL STATS · live 5 · bounds x=0..2 y=0..2 (3x3)' >/dev/null
+for bad_at in '-1,0' '1' '1,2,3' 'x,0' '1,-2' '1,' ',2'; do
+    if $BIN --pattern block --at "$bad_at" >/dev/null 2>&1; then
+        echo "invalid placement was accepted: $bad_at" >&2
+        exit 1
+    fi
+done
+if $BIN --pattern block --at 3,3 --width 4 --height 4 >/dev/null 2>&1; then
+    echo 'oversized placement was accepted' >&2
+    exit 1
+fi
+if $BIN --width 4 --height 4 --at 0,0 >/dev/null 2>&1; then
+    echo 'placement was accepted with random pattern' >&2
+    exit 1
+fi
+if $BIN --load "$empty" --at 0,0 >/dev/null 2>&1; then
+    echo 'placement was accepted with a loaded grid' >&2
+    exit 1
+fi
+default_block=$($BIN --width 6 --height 6 --pattern block --steps 2)
+center_block=$($BIN --width 6 --height 6 --pattern block --at 2,2 --steps 2)
+[ "$default_block" = "$center_block" ]
+
 echo 'cycle CLI tests passed: block period-1, blinker period-2, empty grid, glider cutoff, parity, SVG generation'

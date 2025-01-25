@@ -73,7 +73,8 @@ bool LifeGrid::place(const std::string& pattern, int x, int y) {
     static const std::vector<std::string> glider = {".#.", "..#", "###"};
     const std::vector<std::string>* shape = nullptr;
     if (pattern == "block") shape = &block; else if (pattern == "blinker") shape = &blinker; else if (pattern == "glider") shape = &glider; else return false;
-    if (x < 0 || y < 0 || y + static_cast<int>(shape->size()) > height_ || x + static_cast<int>((*shape)[0].size()) > width_) return false;
+    if (x < 0 || y < 0 || x >= width_ || y >= height_) return false;
+    if (static_cast<int>(shape->size()) > height_ - y || static_cast<int>((*shape)[0].size()) > width_ - x) return false;
     clear();
     for (int row = 0; row < static_cast<int>(shape->size()); ++row) for (int col = 0; col < static_cast<int>((*shape)[row].size()); ++col) if ((*shape)[row][col] == '#') set(x + col, y + row);
     return true;

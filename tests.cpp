@@ -3,13 +3,14 @@
 #include <iostream>
 #include <stdexcept>
 #include <fstream>
+#include <limits>
 
 static int living(const LifeGrid& grid) { int total = 0; for (int y = 0; y < grid.height(); ++y) for (int x = 0; x < grid.width(); ++x) total += grid.alive(x, y); return total; }
 int main() {
     bool rejected = false; try { LifeGrid invalid(0, 10); } catch (const std::invalid_argument&) { rejected = true; } assert(rejected);
     rejected = false; try { LifeGrid invalid(-1000000, 10); } catch (const std::invalid_argument&) { rejected = true; } assert(rejected);
     rejected = false; try { LifeGrid invalid(201, 10); } catch (const std::invalid_argument&) { rejected = true; } assert(rejected);
-    LifeGrid tiny(1, 1); assert(!tiny.place("block", 0, 0));
+    LifeGrid tiny(1, 1); assert(!tiny.place("block", 0, 0)); LifeGrid bounded(5, 5); assert(!bounded.place("block", std::numeric_limits<int>::max(), 0)); assert(!bounded.place("block", 0, std::numeric_limits<int>::max()));
     LifeGrid unchanged(6, 6); unchanged.set(1, 1); const std::string before = unchanged.render(); assert(!unchanged.place("unknown", 0, 0)); assert(unchanged.render() == before); assert(!unchanged.place("glider", 5, 5)); assert(unchanged.render() == before);
     LifeGrid block(6, 6); assert(block.place("block", 2, 2)); block.step(); assert(living(block) == 4); assert(block.alive(2, 2) && block.alive(3, 3));
     LifeGrid blinker(7, 7); assert(blinker.place("blinker", 2, 3)); blinker.step(); assert(blinker.alive(3, 2) && blinker.alive(3, 3) && blinker.alive(3, 4)); blinker.step(); assert(blinker.alive(2, 3) && blinker.alive(3, 3) && blinker.alive(4, 3));
